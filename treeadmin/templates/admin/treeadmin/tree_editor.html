@@ -1,0 +1,47 @@
+{% extends "admin/change_list.html" %}
+{% load adminmedia admin_list i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}treeadmin/style.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}treeadmin/css/treeadmin.css" />
+
+{% if TREEADMIN_MEDIA_HOTLINKING %}
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+{% else %}
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/jquery-1.7.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/jquery-ui-1.8.16.custom.min.js"></script>
+{% endif %}
+<script type="text/javascript">
+    var treeadmin = {
+        {% if TREEADMIN_JQUERY_NO_CONFLICT %}
+            "jQuery": jQuery.noConflict(true)
+        {% else %}
+            "jQuery": jQuery
+        {% endif %}
+        , "tree_structure": {{ tree_structure|default:"null" }}
+    };
+</script>
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/ie_compat.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/jquery.cookie.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/toolbox.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}treeadmin/js/treeadmin.js"></script>
+
+{% endblock %}
+
+
+{% block filters %}
+	{% if cl.has_filters %}
+		<div id="changelist-filter">
+			<h2>{% trans 'Shortcuts' %}</h2>
+			<ul>
+				<li><a id="collapse_entire_tree" href="#">{% trans 'Collapse tree' %}</a></li>
+				<li><a id="open_entire_tree" href="#">{% trans 'Expand tree' %}</a></li>
+			</ul>
+
+			<h2>{% trans 'Filter' %}</h2>
+			{% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+		</div>
+	{% endif %}
+{% endblock %}

@@ -3,7 +3,7 @@
 document.write('<style type="text/css">#result_list { display: none }</style>');
 
 
-feincms.jQuery(function($){
+treeadmin.jQuery(function($){
 	// recolor tree after expand/collapse
 	$.extend($.fn.recolorRows = function() {
 		$('tr:visible:even', this).removeClass('row2').addClass('row1');
@@ -11,24 +11,24 @@ feincms.jQuery(function($){
 	});
 
     function isExpandedNode(id) {
-        return feincms.collapsed_nodes.indexOf(id) == -1;
+        return treeadmin.collapsed_nodes.indexOf(id) == -1;
     }
 
     function markNodeAsExpanded(id) {
         // remove itemId from array of collapsed nodes
-        var idx = feincms.collapsed_nodes.indexOf(id);
+        var idx = treeadmin.collapsed_nodes.indexOf(id);
         if(idx >= 0)
-            feincms.collapsed_nodes.splice(idx, 1);
+            treeadmin.collapsed_nodes.splice(idx, 1);
     }
 
     function markNodeAsCollapsed(id) {
         if(isExpandedNode(id))
-            feincms.collapsed_nodes.push(id);
+            treeadmin.collapsed_nodes.push(id);
     }
 
 	// toggle children
 	function doToggle(id, show) {
-		var children = feincms.tree_structure[id];
+		var children = treeadmin.tree_structure[id];
 		for (var i=0; i<children.length; ++i) {
 			var childId = children[i];
 			if(show) {
@@ -58,7 +58,7 @@ feincms.jQuery(function($){
 			// adds 'children' class to all parents
 			var pageId = extract_item_id($('.page_marker', el).attr('id'));
 			$(el).attr('id', 'item-' + pageId);
-			if (feincms.tree_structure[pageId].length) {
+			if (treeadmin.tree_structure[pageId].length) {
 					$('.page_marker', el).addClass('children');
 			}
 
@@ -212,11 +212,11 @@ feincms.jQuery(function($){
        the current state of the tree so we can restore it on a reload.
        Note: We might use html5's session storage? */
     function storeCollapsedNodes(nodes) {
-        $.cookie('feincms_collapsed_nodes', "[" + nodes.join(",") + "]", { expires: 7 });
+        $.cookie('treeadmin_collapsed_nodes', "[" + nodes.join(",") + "]", { expires: 7 });
     }
 
     function retrieveCollapsedNodes() {
-        var n = $.cookie('feincms_collapsed_nodes');
+        var n = $.cookie('treeadmin_collapsed_nodes');
         if(n != null) {
             try {
                 n = $.parseJSON(n);
@@ -244,7 +244,7 @@ feincms.jQuery(function($){
             markNodeAsCollapsed(itemId);
         }
 
-        storeCollapsedNodes(feincms.collapsed_nodes);
+        storeCollapsedNodes(treeadmin.collapsed_nodes);
 
         doToggle(itemId, show);
 
@@ -279,7 +279,7 @@ feincms.jQuery(function($){
                     markNodeAsCollapsed(itemId);
 				}
 			});
-            storeCollapsedNodes(feincms.collapsed_nodes);
+            storeCollapsedNodes(treeadmin.collapsed_nodes);
 			rlist.show();
 			$('tbody', rlist).recolorRows();
 		});
@@ -361,7 +361,7 @@ feincms.jQuery(function($){
         $('tbody tr:first', rlist).attr('tabindex', 0).focus();
         $('tr', rlist).keydown(keyboardNavigationHandler);
 
-		feincms.collapsed_nodes = [];
+		treeadmin.collapsed_nodes = [];
 		var storedNodes = retrieveCollapsedNodes();
         if(storedNodes == null) {
             $('#collapse_entire_tree').click();
