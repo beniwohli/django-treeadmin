@@ -27,7 +27,7 @@ def django_boolean_icon(field_val, alt_text=None, title=None):
     else:
         title = ''
     return mark_safe(u'<img src="%sadmin/icon-%s.gif" alt="%s" %s/>' %
-            (django_settings.STATIC_URL, BOOLEAN_MAPPING[field_val], alt_text, title))
+                     (django_settings.STATIC_URL, BOOLEAN_MAPPING[field_val], alt_text, title))
 
 
 def _build_tree_structure(cls):
@@ -85,11 +85,11 @@ def ajax_editable_boolean_cell(item, attr, text='', override=None):
     else:
         value = getattr(item, attr)
         a = [
-              '<input type="checkbox"',
-              value and ' checked="checked"' or '',
-              ' onclick="return inplace_toggle_boolean(%d, \'%s\')";' % (item.id, attr),
-              ' />',
-              text,
+            '<input type="checkbox"',
+            value and ' checked="checked"' or '',
+            ' onclick="return inplace_toggle_boolean(%d, \'%s\')";' % (item.id, attr),
+            ' />',
+            text,
             ]
 
     a.insert(0, '<div id="wrap_%s_%d">' % ( attr, item.id ))
@@ -132,7 +132,7 @@ class ChangeList(main.ChangeList):
         return super(ChangeList, self).get_query_set(*args, **kwargs).order_by('tree_id', 'lft')
 
     def get_results(self, request):
-        if settings.FEINCMS_TREE_EDITOR_INCLUDE_ANCESTORS:
+        if self.model_admin.filter_include_ancestors:
             clauses = [Q(
                 tree_id=tree_id,
                 lft__lte=lft,
@@ -147,7 +147,7 @@ class ChangeList(main.ChangeList):
         opts = self.model_admin.opts
         label = opts.app_label + '.' + opts.get_change_permission()
         for item in self.result_list:
-            if settings.FEINCMS_TREE_EDITOR_OBJECT_PERMISSIONS:
+            if self.model_admin.enable_object_permissions:
                 item.feincms_editable = self.model_admin.has_change_permission(request, item)
             else:
                 item.feincms_editable = True
@@ -165,7 +165,15 @@ class TreeEditor(admin.ModelAdmin):
     .. _django-mptt: http://github.com/mptt/django-mptt/
     """
 
+    filter_include_ancestors = False
+    enable_object_permissions = False
+    jquery_use_google_cdn = True
+    jquery_no_conflict = True
+
     def __init__(self, *args, **kwargs):
+        if self.filter_include_ancestors:
+            self.list_per_page = 999999999
+
         super(TreeEditor, self).__init__(*args, **kwargs)
 
         self.list_display = list(self.list_display)
@@ -179,9 +187,9 @@ class TreeEditor(admin.ModelAdmin):
 
         opts = self.model._meta
         self.change_list_template = [
-            'admin/feincms/%s/%s/tree_editor.html' % (opts.app_label, opts.object_name.lower()),
-            'admin/feincms/%s/tree_editor.html' % opts.app_label,
-            'admin/feincms/tree_editor.html',
+            'admin/treeadmin/%s/%s/tree_editor.html' % (opts.app_label, opts.object_name.lower()),
+            'admin/treeadmin/%s/tree_editor.html' % opts.app_label,
+            'admin/treeadmin/tree_editor.html',
             ]
 
     def editable(self, item):
@@ -201,13 +209,13 @@ class TreeEditor(admin.ModelAdmin):
             editable_class = ' tree-item-not-editable'
 
         r += '<span id="page_marker-%d" class="page_marker%s" style="width: %dpx;">&nbsp;</span>&nbsp;' % (
-                item.id, editable_class, 14+item.level*18)
-#        r += '<span tabindex="0">'
+            item.id, editable_class, 14+item.level*18)
+        #        r += '<span tabindex="0">'
         if hasattr(item, 'short_title'):
             r += item.short_title()
         else:
             r += unicode(item)
-#        r += '</span>'
+        #        r += '</span>'
         return mark_safe(r)
     indented_short_title.short_description = _('title')
     indented_short_title.allow_tags = True
@@ -256,7 +264,7 @@ class TreeEditor(admin.ModelAdmin):
         try:
             item_id = int(request.POST.get('item_id', None))
             attr = str(request.POST.get('attr', None))
-        except:
+        except Exception:
             return HttpResponseBadRequest("Malformed request")
 
         if not request.user.is_staff:
@@ -338,13 +346,38 @@ class TreeEditor(admin.ModelAdmin):
         self._refresh_changelist_caches()
 
         extra_context = extra_context or {}
-        #extra_context['FEINCMS_ADMIN_MEDIA'] = settings.FEINCMS_ADMIN_MEDIA
-        extra_context['FEINCMS_ADMIN_MEDIA_HOTLINKING'] = settings.FEINCMS_ADMIN_MEDIA_HOTLINKING
+        extra_context['TREEADMIN_MEDIA_HOTLINKING'] = self.jquery_use_google_cdn
+        extra_context['TREEADMIN_JQUERY_NO_CONFLICT'] = self.jquery_no_conflict
         extra_context['tree_structure'] = mark_safe(simplejson.dumps(
-                                                    _build_tree_structure(self.model)))
+            _build_tree_structure(self.model)))
 
         return super(TreeEditor, self).changelist_view(request, extra_context, *args, **kwargs)
 
+    def has_change_permission(self, request, obj=None):
+        """
+        Implement a lookup for object level permissions. Basically the same as
+        ModelAdmin.has_change_permission, but also passes the obj parameter in.
+        """
+        if self.enable_object_permissions:
+            opts = self.opts
+            r = request.user.has_perm(opts.app_label + '.' + opts.get_change_permission(), obj)
+        else:
+            r = True
+
+        return r and super(TreeEditor, self).has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Implement a lookup for object level permissions. Basically the same as
+        ModelAdmin.has_delete_permission, but also passes the obj parameter in.
+        """
+        if self.enable_object_permissions:
+            opts = self.opts
+            r = request.user.has_perm(opts.app_label + '.' + opts.get_delete_permission(), obj)
+        else:
+            r = True
+
+        return r and super(TreeEditor, self).has_delete_permission(request, obj)
 
     def _move_node(self, request):
         cut_item = self.model._tree_manager.get(pk=request.POST.get('cut_item'))
