@@ -103,7 +103,7 @@ def ajax_editable_boolean(attr, short_description):
 
     Example::
 
-        class MyTreeEditor(TreeEditor):
+        class MyTreeAdmin(TreeAdmin):
             list_display = ('__unicode__', 'active_toggle')
 
             active_toggle = ajax_editable_boolean('active', _('is active'))
@@ -156,9 +156,9 @@ class ChangeList(main.ChangeList):
 # MARK: -
 # ------------------------------------------------------------------------
 
-class TreeEditor(admin.ModelAdmin):
+class TreeAdmin(admin.ModelAdmin):
     """
-    The ``TreeEditor`` modifies the standard Django administration change list
+    The ``TreeAdmin`` modifies the standard Django administration change list
     to a drag-drop enabled interface for django-mptt_-managed Django models.
 
     .. _django-mptt: http://github.com/mptt/django-mptt/
@@ -173,7 +173,7 @@ class TreeEditor(admin.ModelAdmin):
         if self.filter_include_ancestors:
             self.list_per_page = 999999999
 
-        super(TreeEditor, self).__init__(*args, **kwargs)
+        super(TreeAdmin, self).__init__(*args, **kwargs)
 
         self.list_display = list(self.list_display)
 
@@ -350,7 +350,7 @@ class TreeEditor(admin.ModelAdmin):
         extra_context['tree_structure'] = mark_safe(simplejson.dumps(
             _build_tree_structure(self.model)))
 
-        return super(TreeEditor, self).changelist_view(request, extra_context, *args, **kwargs)
+        return super(TreeAdmin, self).changelist_view(request, extra_context, *args, **kwargs)
 
     def has_change_permission(self, request, obj=None):
         """
@@ -363,7 +363,7 @@ class TreeEditor(admin.ModelAdmin):
         else:
             r = True
 
-        return r and super(TreeEditor, self).has_change_permission(request, obj)
+        return r and super(TreeAdmin, self).has_change_permission(request, obj)
 
     def has_delete_permission(self, request, obj=None):
         """
@@ -376,7 +376,7 @@ class TreeEditor(admin.ModelAdmin):
         else:
             r = True
 
-        return r and super(TreeEditor, self).has_delete_permission(request, obj)
+        return r and super(TreeAdmin, self).has_delete_permission(request, obj)
 
     def _move_node(self, request):
         cut_item = self.model._tree_manager.get(pk=request.POST.get('cut_item'))
@@ -410,9 +410,9 @@ class TreeEditor(admin.ModelAdmin):
     actions_column.short_description = _('actions')
 
 
-class JohnnyCacheAwareTreeEditor(TreeEditor):
+class JohnnyCacheAwareTreeAdmin(TreeAdmin):
     """
-    A TreeEditor that invalidates the johnny-cache for the model before
+    A TreeAdmin that invalidates the johnny-cache for the model before
     and after moving the node.
 
     Additionally, the model is added to johnny's blacklist while moving.
@@ -426,12 +426,12 @@ class JohnnyCacheAwareTreeEditor(TreeEditor):
         try:
             import johnny
         except ImportError:
-            return super(JohnnyCacheAwareTreeEditor, self)._move_node(request)
+            return super(JohnnyCacheAwareTreeAdmin, self)._move_node(request)
         original_blacklist = johnny.settings.BLACKLIST
         johnny.settings.BLACKLIST = set(list(original_blacklist) + [self.model._meta.db_table])
         johnny.cache.invalidate(self.model)
         try:
-            result = super(JohnnyCacheAwareTreeEditor, self)._move_node(request)
+            result = super(JohnnyCacheAwareTreeAdmin, self)._move_node(request)
         finally:
             johnny.settings.BLACKLIST = original_blacklist
         johnny.cache.invalidate(self.model)
