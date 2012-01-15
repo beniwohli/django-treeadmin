@@ -2,7 +2,6 @@ from django.conf import settings as django_settings
 from django.contrib import admin
 from django.contrib.admin.views import main
 from django.db.models import Q
-from django.db.models.query import QuerySet
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound, HttpResponseServerError
 from django.utils import simplejson
 from django.utils.safestring import mark_safe
@@ -409,3 +408,31 @@ class TreeEditor(admin.ModelAdmin):
         return u' '.join(self._actions_column(instance))
     actions_column.allow_tags = True
     actions_column.short_description = _('actions')
+
+
+class JohnnyCacheAwareTreeEditor(TreeEditor):
+    """
+    A TreeEditor that invalidates the johnny-cache for the model before
+    and after moving the node.
+
+    Additionally, the model is added to johnny's blacklist while moving.
+
+    This may not be the absolutely best place to do this, but it gets rid
+    of the almost-instant tree corruption when moving nodes with activated
+    johnny-cache
+    """
+
+    def _move_node(self, request):
+        try:
+            import johnny
+        except ImportError:
+            return super(JohnnyCacheAwareTreeEditor, self)._move_node(request)
+        original_blacklist = johnny.settings.BLACKLIST
+        johnny.settings.BLACKLIST = set(list(original_blacklist) + [self.model._meta.db_table])
+        johnny.cache.invalidate(self.model)
+        try:
+            result = super(JohnnyCacheAwareTreeEditor, self)._move_node(request)
+        finally:
+            johnny.settings.BLACKLIST = original_blacklist
+        johnny.cache.invalidate(self.model)
+        return result
