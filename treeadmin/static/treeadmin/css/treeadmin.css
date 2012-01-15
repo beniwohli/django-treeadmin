@@ -52,3 +52,31 @@ div#drag_line div {
 tr.non-editable a:link, tr.non-editable a:visited, tr.non-editable td {
     color: #AAA;
 }
+
+#changelist {
+    top: 20px;
+}
+
+
+
+.button {
+    margin:5px; padding:5px;
+    font-weight: bold;
+    background-image:url('img/nav-bg.gif');
+    cursor:pointer;
+    border: 1px solid #678;
+}
+
+th { vertical-align: middle; }
+
+select {
+    max-width: 580px;
+}
+
+.page_marker { display:block; text-align: right; float: left; padding: 1px 1px 0 0; }
+
+table#result_list :focus { background-color: #ccddff !important; outline: 0px; }
+
+#page_form {
+    clear: both;
+}
