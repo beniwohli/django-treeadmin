@@ -1,0 +1,5 @@
+include README.rst
+include LICENSE
+recursive-include docs *.rst
+recursive-include treeadmin/templates *.html
+recursive-include treeadmin/static *
