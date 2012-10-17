@@ -10,21 +10,21 @@ treeadmin.jQuery(function($){
 		$('tr:visible:odd', this).removeClass('row1').addClass('row2');
 	});
 
-    function isExpandedNode(id) {
-        return treeadmin.collapsed_nodes.indexOf(id) == -1;
-    }
+	function isExpandedNode(id) {
+		return treeadmin.collapsed_nodes.indexOf(id) == -1;
+	}
 
-    function markNodeAsExpanded(id) {
-        // remove itemId from array of collapsed nodes
-        var idx = treeadmin.collapsed_nodes.indexOf(id);
-        if(idx >= 0)
-            treeadmin.collapsed_nodes.splice(idx, 1);
-    }
+	function markNodeAsExpanded(id) {
+		// remove itemId from array of collapsed nodes
+		var idx = treeadmin.collapsed_nodes.indexOf(id);
+		if(idx >= 0)
+			treeadmin.collapsed_nodes.splice(idx, 1);
+	}
 
-    function markNodeAsCollapsed(id) {
-        if(isExpandedNode(id))
-            treeadmin.collapsed_nodes.push(id);
-    }
+	function markNodeAsCollapsed(id) {
+		if(isExpandedNode(id))
+			treeadmin.collapsed_nodes.push(id);
+	}
 
 	// toggle children
 	function doToggle(id, show) {
@@ -45,6 +45,10 @@ treeadmin.jQuery(function($){
 		}
 	}
 
+	function rowLevel($row) {
+		return parseInt($row.attr('rel').replace(/[^\d]/ig, ''));
+	}
+
 	/*
 	 * FeinCMS Drag-n-drop tree reordering.
 	 * Based upon code by bright4 for Radiant CMS, rewritten for
@@ -59,7 +63,7 @@ treeadmin.jQuery(function($){
 			var pageId = extract_item_id($('.page_marker', el).attr('id'));
 			$(el).attr('id', 'item-' + pageId);
 			if (treeadmin.tree_structure[pageId].length) {
-					$('.page_marker', el).addClass('children');
+				$('.page_marker', el).addClass('children');
 			}
 
 			// set 'level' on rel attribute
@@ -68,7 +72,7 @@ treeadmin.jQuery(function($){
 			$(el).attr('rel', rel);
 		});
 
-			$('div.drag_handle').bind('mousedown', function(event) {
+		$('div.drag_handle').bind('mousedown', function(event) {
 			BEFORE = 0;
 			AFTER = 1;
 			CHILD = 2;
@@ -79,13 +83,19 @@ treeadmin.jQuery(function($){
 			var moveTo = new Object();
 			var expandObj = new Object();
 
-			$("body").disableSelection().bind('mousemove', function(event) {
+			$("body").addClass('dragging').disableSelection().bind('mousemove', function(event) {
 				// attach dragged item to mouse
-				var cloned = originalRow.clone();
+				var cloned = originalRow.html();
 				if($('#ghost').length == 0) {
 					$('<div id="ghost"></div>').appendTo('body');
 				}
-				$('#ghost').html(cloned).css({ 'opacity': .8, 'position': 'absolute', 'top': event.pageY, 'left': event.pageX-30, 'width': 600 });
+				$('#ghost').html(cloned).css({
+					'opacity': .8,
+					'position': 'absolute',
+					'top': event.pageY,
+					'left': event.pageX-30,
+					'width': 600
+				});
 
 				// check on edge of screen
 				if(event.pageY+100 > $(window).height()+$(window).scrollTop()) {
@@ -99,61 +109,46 @@ treeadmin.jQuery(function($){
 					$("body").append('<div id="drag_line" style="position:absolute">line<div></div></div>');
 				}
 
-				var top;
-
 				// loop trough all rows
 				$("tr", originalRow.parent()).each(function(index, element) {
-					element = $(element);
-					top = element.offset().top;
+					var element = $(element),
+						top = element.offset().top;
 
 					// check if mouse is over a row
-					if (event.pageY >= top && event.pageY <= top + rowHeight) {
-						// check if collapsed children, if so, on hover with simple timeout
-						if(
-							$('span.page_marker', element).hasClass('children') &&
-							$('span.page_marker', element).hasClass('closed')
-						) {
-							var id = extract_item_id($('span.page_marker', element).attr('id'));
-							setTimeout(function() {
-								doToggle(id, true);
-								$('#result_list tbody').recolorRows();
-								$('span.page_marker', element).removeClass('closed');
-							}, 750);
-						}
+					if (event.pageY >= top && event.pageY < top + rowHeight) {
+						var targetRow = null,
+							targetLoc = null,
+							elementLevel = rowLevel(element);
 
-						var targetRow = null;
-						var targetLoc;
-						if(event.pageY >= top && event.pageY <= top + rowHeight / 2 && element.prev()) {
-							// upper half row
+						if (event.pageY >= top && event.pageY < top + rowHeight / 3) {
 							targetRow = element;
 							targetLoc = BEFORE;
-						} else if(event.pageY > top + rowHeight / 2 && event.pageY <= top + rowHeight) {
-							// lower half row
-							if(element.next().size() > 0) {
-								next = element.next().attr('rel').replace(/[^\d]/ig,"")
-							} else {
-								next = 0;
-							}
-
-							if(next < element.attr('rel').replace(/[^\d]/ig,"") && event.pageX < 100) {
-								targetRow = element;
-								targetLoc = AFTER;
-							} else {
+						} else if (event.pageY >= top + rowHeight / 3 && event.pageY < top + rowHeight * 2 / 3) {
+							var next = element.next();
+							// there's no point in allowing adding children when there are some already
+							// better move the items to the correct place right away
+							if (!next.length || rowLevel(next) <= elementLevel) {
 								targetRow = element;
 								targetLoc = CHILD;
+							}
+						} else if (event.pageY >= top + rowHeight * 2 / 3 && event.pageY < top + rowHeight) {
+							var next = element.next();
+							if (!next.length || rowLevel(next) <= elementLevel) {
+								targetRow = element;
+								targetLoc = AFTER;
 							}
 						}
 
 						if(targetRow) {
-							var padding = 30 + element.attr('rel') * CHILD_PAD;
+							var padding = 37 + element.attr('rel') * CHILD_PAD + (targetLoc == CHILD ? CHILD_PAD : 0 );
 
 							$("#drag_line").css({
-								'width': targetRow.width() - padding - (targetLoc == CHILD ? CHILD_PAD : 0 ),
-								'left': targetRow.offset().left + padding + (targetLoc == CHILD ? CHILD_PAD : 0),
+								'width': targetRow.width() - padding,
+								'left': targetRow.offset().left + padding,
 								'top': targetRow.offset().top + (targetLoc == AFTER || targetLoc == CHILD ? rowHeight: 0) -1
 							});
 
-									// Store the found row and options
+							// Store the found row and options
 							moveTo.hovering = element;
 							moveTo.relativeTo = targetRow;
 							moveTo.side = targetLoc;
@@ -168,39 +163,40 @@ treeadmin.jQuery(function($){
 				if (event.which == '27') {
 					$("#drag_line").remove();
 					$("#ghost").remove();
-					$("body").enableSelection().unbind('mousemove').unbind('mouseup');
+					$("body").removeClass('dragging').enableSelection().unbind('mousemove').unbind('mouseup');
 					event.preventDefault();
 				}
 			});
 
 			$("body").bind('mouseup', function(event) {
-				var cutItem = extract_item_id(originalRow.find('.page_marker').attr('id'));
-				var pastedOn = extract_item_id(moveTo.relativeTo.find('.page_marker').attr('id'));
+				if(moveTo.relativeTo) {
+					var cutItem = extract_item_id(originalRow.find('.page_marker').attr('id'));
+					var pastedOn = extract_item_id(moveTo.relativeTo.find('.page_marker').attr('id'));
+					// get out early if items are the same
+					if(cutItem != pastedOn) {
+						var isParent = (moveTo.relativeTo.next().attr('rel') > moveTo.relativeTo.attr('rel'));
+						// determine position
+						if(moveTo.side == CHILD && !isParent) {
+							var position = 'last-child';
+						} else {
+							var position = 'left';
+						}
 
-				// get out early if items are the same
-				if(cutItem != pastedOn) {
-					var isParent = (moveTo.relativeTo.next().attr('rel') > moveTo.relativeTo.attr('rel'));
-					// determine position
-					if(moveTo.side == CHILD && !isParent) {
-						var position = 'last-child';
-					} else {
-						var position = 'left';
-					}
-
-					// save
-					$.post('.', {
-						'__cmd': 'move_node',
-						'position': position,
-						'cut_item': cutItem,
-						'pasted_on': pastedOn
-					}, function(data) {
+						// save
+						$.post('.', {
+							'__cmd': 'move_node',
+							'position': position,
+							'cut_item': cutItem,
+							'pasted_on': pastedOn
+						}, function(data) {
 							window.location.reload();
-					});
-				} else {
-					$("#drag_line").remove();
-					$("#ghost").remove();
+						});
+					} else {
+						$("#drag_line").remove();
+						$("#ghost").remove();
+					}
+					$("body").removeClass('dragging').enableSelection().unbind('mousemove').unbind('mouseup');
 				}
-				$("body").enableSelection().unbind('mousemove').unbind('mouseup');
 			});
 
 		});
@@ -208,57 +204,57 @@ treeadmin.jQuery(function($){
 		return this;
 	});
 
-    /* Every time the user expands or collapses a part of the tree, we remember
-       the current state of the tree so we can restore it on a reload.
-       Note: We might use html5's session storage? */
-    function storeCollapsedNodes(nodes) {
-        $.cookie('treeadmin_collapsed_nodes', "[" + nodes.join(",") + "]", { expires: 7 });
-    }
+	/* Every time the user expands or collapses a part of the tree, we remember
+	 the current state of the tree so we can restore it on a reload.
+	 Note: We might use html5's session storage? */
+	function storeCollapsedNodes(nodes) {
+		$.cookie('treeadmin_collapsed_nodes', "[" + nodes.join(",") + "]", { expires: 7 });
+	}
 
-    function retrieveCollapsedNodes() {
-        var n = $.cookie('treeadmin_collapsed_nodes');
-        if(n != null) {
-            try {
-                n = $.parseJSON(n);
-            } catch(e) {
-                n = null;
-            }
-        }
-        return n;
-    }
+	function retrieveCollapsedNodes() {
+		var n = $.cookie('treeadmin_collapsed_nodes');
+		if(n != null) {
+			try {
+				n = $.parseJSON(n);
+			} catch(e) {
+				n = null;
+			}
+		}
+		return n;
+	}
 
-    function expandOrCollapseNode(item) {
-        var show = true;
+	function expandOrCollapseNode(item) {
+		var show = true;
 
-        if(!item.hasClass('children'))
-            return;
+		if(!item.hasClass('children'))
+			return;
 
-        var itemId = extract_item_id(item.attr('id'));
+		var itemId = extract_item_id(item.attr('id'));
 
-        if(!isExpandedNode(itemId)) {
-            item.removeClass('closed');
-            markNodeAsExpanded(itemId);
-        } else {
-            item.addClass('closed');
-            show = false;
-            markNodeAsCollapsed(itemId);
-        }
+		if(!isExpandedNode(itemId)) {
+			item.removeClass('closed');
+			markNodeAsExpanded(itemId);
+		} else {
+			item.addClass('closed');
+			show = false;
+			markNodeAsCollapsed(itemId);
+		}
 
-        storeCollapsedNodes(treeadmin.collapsed_nodes);
+		storeCollapsedNodes(treeadmin.collapsed_nodes);
 
-        doToggle(itemId, show);
+		doToggle(itemId, show);
 
-        $('#result_list tbody').recolorRows();
-    }
+		$('#result_list tbody').recolorRows();
+	}
 
 	$.extend($.fn.feinTreeToggleItem = function() {
 		$(this).click(function(event){
-            expandOrCollapseNode($(this));
-            if(event.stopPropagation) {
-                event.stopPropagation();
-            } else {
-                event.cancelBubble = true;
-            }
+			expandOrCollapseNode($(this));
+			if(event.stopPropagation) {
+				event.stopPropagation();
+			} else {
+				event.cancelBubble = true;
+			}
 
 			return false;
 		});
@@ -273,13 +269,13 @@ treeadmin.jQuery(function($){
 			$('tbody tr', rlist).each(function(i, el) {
 				var marker = $('.page_marker', el);
 				if(marker.hasClass('children')) {
-                    var itemId = extract_item_id(marker.attr('id'));
+					var itemId = extract_item_id(marker.attr('id'));
 					doToggle(itemId, false);
 					marker.addClass('closed');
-                    markNodeAsCollapsed(itemId);
+					markNodeAsCollapsed(itemId);
 				}
 			});
-            storeCollapsedNodes(treeadmin.collapsed_nodes);
+			storeCollapsedNodes(treeadmin.collapsed_nodes);
 			rlist.show();
 			$('tbody', rlist).recolorRows();
 		});
@@ -294,10 +290,10 @@ treeadmin.jQuery(function($){
 			$('tbody tr', rlist).each(function(i, el) {
 				var marker = $('span.page_marker', el);
 				if(marker.hasClass('children')) {
-                    var itemId = extract_item_id($('span.page_marker', el).attr('id'));
+					var itemId = extract_item_id($('span.page_marker', el).attr('id'));
 					doToggle(itemId, true);
 					marker.removeClass('closed');
-                    markNodeAsExpanded(itemId);
+					markNodeAsExpanded(itemId);
 				}
 			});
 			storeCollapsedNodes([]);
@@ -307,71 +303,71 @@ treeadmin.jQuery(function($){
 		return this;
 	});
 
-    var changelist_tab = function(elem, event, direction) {
-        event.preventDefault();
-        elem = $(elem);
-        var ne = (direction > 0) ? elem.nextAll(':visible:first') : elem.prevAll(':visible:first');
-        if(ne) {
-            elem.attr('tabindex', -1);
-            ne.attr('tabindex', '0');
-            ne.focus();
-        }
-    };
+	var changelist_tab = function(elem, event, direction) {
+		event.preventDefault();
+		elem = $(elem);
+		var ne = (direction > 0) ? elem.nextAll(':visible:first') : elem.prevAll(':visible:first');
+		if(ne) {
+			elem.attr('tabindex', -1);
+			ne.attr('tabindex', '0');
+			ne.focus();
+		}
+	};
 
-    function keyboardNavigationHandler(event) {
-        // console.log('keydown', this, event.keyCode);
-        switch(event.keyCode) {
-            case 40: // down
-                changelist_tab(this, event, 1);
-                break;
-            case 38: // up
-                changelist_tab(this, event, -1);
-                break;
-            case 37: // left
-            case 39: // right
-                expandOrCollapseNode($(this).find('.page_marker'));
-                break;
-            case 13: // return
-                where_to = extract_item_id($('span', this).attr('id'));
-                document.location = document.location.pathname + where_to + '/'
-                break;
-            default:
-                break;
-            };
-    }
+	function keyboardNavigationHandler(event) {
+		// console.log('keydown', this, event.keyCode);
+		switch(event.keyCode) {
+			case 40: // down
+				changelist_tab(this, event, 1);
+				break;
+			case 38: // up
+				changelist_tab(this, event, -1);
+				break;
+			case 37: // left
+			case 39: // right
+				expandOrCollapseNode($(this).find('.page_marker'));
+				break;
+			case 13: // return
+				where_to = extract_item_id($('span', this).attr('id'));
+				document.location = document.location.pathname + where_to + '/'
+				break;
+			default:
+				break;
+		};
+	}
 
 	// fire!
-    rlist = $("#result_list");
+	rlist = $("#result_list");
 	if($('tbody tr', rlist).length > 1) {
-        rlist.hide();
+		rlist.hide();
 		$('tbody', rlist).feinTree();
 		$('span.page_marker', rlist).feinTreeToggleItem();
 		$('#collapse_entire_tree').bindCollapseTreeEvent();
 		$('#open_entire_tree').bindOpenTreeEvent();
 
-        // Disable things user cannot do anyway (object level permissions)
-        non_editable_fields = $('.tree-item-not-editable', rlist).parents('tr');
-        non_editable_fields.addClass('non-editable');
-        $('input:checkbox', non_editable_fields).attr('disabled', 'disabled');
-        $('a:first', non_editable_fields).click(function(e){e.preventDefault()});
-        $('.drag_handle', non_editable_fields).removeClass('drag_handle');
+		// Disable things user cannot do anyway (object level permissions)
+		non_editable_fields = $('.tree-item-not-editable', rlist).parents('tr');
+		non_editable_fields.addClass('non-editable');
+		$('input:checkbox', non_editable_fields).attr('disabled', 'disabled');
+		$('a:first', non_editable_fields).click(function(e){e.preventDefault()});
+		$('.drag_handle', non_editable_fields).removeClass('drag_handle');
 
-        /* Enable focussing, put focus on first result, add handler for keyboard navigation */
-        $('tr', rlist).attr('tabindex', -1);
-        $('tbody tr:first', rlist).attr('tabindex', 0).focus();
-        $('tr', rlist).keydown(keyboardNavigationHandler);
+		/* Enable focussing, put focus on first result, add handler for keyboard navigation */
+		$('tr', rlist).attr('tabindex', -1);
+		$('tbody tr:first', rlist).attr('tabindex', 0).focus();
+		$('tr', rlist).keydown(keyboardNavigationHandler);
 
 		treeadmin.collapsed_nodes = [];
 		var storedNodes = retrieveCollapsedNodes();
-        if(storedNodes == null) {
-            $('#collapse_entire_tree').click();
-        } else {
-            for(var i=0; i<storedNodes.length; i++) {
-                $('#page_marker-' + storedNodes[i]).click();
-            }
+		if(storedNodes == null) {
+			$('#collapse_entire_tree').click();
+		} else {
+			for(var i=0; i<storedNodes.length; i++) {
+				$('#page_marker-' + storedNodes[i]).click();
+			}
 		}
 	}
 
-    rlist.show();
-    $('tbody', rlist).recolorRows();
+	rlist.show();
+	$('tbody', rlist).recolorRows();
 });
