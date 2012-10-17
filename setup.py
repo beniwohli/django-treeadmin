@@ -16,6 +16,7 @@ setup(
     include_package_data = True,
     install_requires=[
         'Django>=1.2',
+        'django-mptt>=0.5',
     ],
     classifiers = [
         "Development Status :: 3 - Alpha",
