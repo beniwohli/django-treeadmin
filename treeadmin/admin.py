@@ -210,7 +210,7 @@ class TreeAdmin(admin.ModelAdmin):
         r += '<span id="page_marker-%d" class="page_marker%s" style="width: %dpx;">&nbsp;</span>&nbsp;' % (
             item.id, editable_class, 14+item.level*18)
         #        r += '<span tabindex="0">'
-        if hasattr(item, 'short_title'):
+        if hasattr(item, 'short_title') and callable(item.short_title):
             r += item.short_title()
         else:
             r += unicode(item)
