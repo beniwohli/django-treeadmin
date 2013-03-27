@@ -383,7 +383,7 @@ class TreeAdmin(admin.ModelAdmin):
         pasted_on = self.model.objects.get(pk=request.POST.get('pasted_on'))
         position = request.POST.get('position')
 
-        if position in ('last-child', 'left'):
+        if position in ('last-child', 'left', 'right'):
             try:
                 self.model._tree_manager.move_node(cut_item, pasted_on, position)
             except InvalidMove, e:
