@@ -32,7 +32,7 @@ function replace_elements(data) {
 /* Setup django csrf-token for ajax calls, necessary since Django 1.2.5 */
 /* See http://docs.djangoproject.com/en/1.2/releases/1.2.5/#csrf-exception-for-ajax-requests */
 
-$.ajaxSetup({
+treeadmin.jQuery.ajaxSetup({
     beforeSend: function(xhr, settings) {
         function getCookie(name) {
             var cookieValue = null;
