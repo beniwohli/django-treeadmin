@@ -128,16 +128,18 @@ class ChangeList(main.ChangeList):
         super(ChangeList, self).__init__(request, *args, **kwargs)
 
     def get_query_set(self, *args, **kwargs):
-        return super(ChangeList, self).get_query_set(*args, **kwargs).order_by('tree_id', 'lft')
+        mptt_opts = self.model._mptt_meta
+        return super(ChangeList, self).get_query_set(*args, **kwargs).order_by(mptt_opts.tree_id_attr, mptt_opts.left_attr)
 
     def get_results(self, request):
+        mptt_opts = self.model._mptt_meta
         if self.model_admin.filter_include_ancestors:
-            clauses = [Q(
-                tree_id=tree_id,
-                lft__lte=lft,
-                rght__gte=rght,
-            ) for lft, rght, tree_id in\
-                       self.query_set.values_list('lft', 'rght', 'tree_id')]
+            clauses = [Q(**{
+                mptt_opts.tree_id_attr: tree_id,
+                mptt_opts.left_attr + '__lte': lft,
+                mptt_opts.right_attr + '__gte': rght,
+            }) for lft, rght, tree_id in \
+                self.query_set.values_list(mptt_opts.left_attr, mptt_opts.right_attr, mptt_opts.tree_id_attr)]
             if clauses:
                 self.query_set = self.model._default_manager.filter(reduce(lambda p, q: p|q, clauses))
 
