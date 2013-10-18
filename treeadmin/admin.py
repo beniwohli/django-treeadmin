@@ -202,8 +202,6 @@ class TreeAdmin(admin.ModelAdmin):
         the object's depth in the hierarchy.
         """
         r = ''
-        if hasattr(item, 'get_absolute_url'):
-            r = '<input type="hidden" class="medialibrary_file_path" value="%s" />' % item.get_absolute_url()
 
         editable_class = ''
         if not getattr(item, 'feincms_editable', True):
