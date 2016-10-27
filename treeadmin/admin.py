@@ -128,9 +128,9 @@ class ChangeList(main.ChangeList):
         self.user = request.user
         super(ChangeList, self).__init__(request, *args, **kwargs)
 
-    def get_query_set(self, *args, **kwargs):
+    def get_queryset(self, *args, **kwargs):
         mptt_opts = self.model._mptt_meta
-        return super(ChangeList, self).get_query_set(*args, **kwargs).order_by(mptt_opts.tree_id_attr, mptt_opts.left_attr)
+        return super(ChangeList, self).get_queryset(*args, **kwargs).order_by(mptt_opts.tree_id_attr, mptt_opts.left_attr)
 
     def get_results(self, request):
         mptt_opts = self.model._mptt_meta
